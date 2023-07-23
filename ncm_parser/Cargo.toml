@@ -3,8 +3,10 @@ name = "ncm_parser"
 version = "0.1.0"
 edition = "2021"
 authors = ["Junbo Huang <342526760@qq.com>"]
+license = "MIT"
 description = "A single file ncm parser"
-license = "Unlicense"
+readme = "README.mdcar"
+repository = "https://github.com/shuangsilab/ncm_dumper"
 keywords = ["ncm", "dump", "parse", "parser", "reader"]
 categories = ["parser-implementations"]
 
