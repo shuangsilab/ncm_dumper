@@ -6,9 +6,24 @@ music file format which is widely used on **NeteaseCloudMuic**.
 For more details see
 [https://www.cnblogs.com/cyx-b/p/13443003.html](https://www.cnblogs.com/cyx-b/p/13443003.html)
 
+API Documentation is avaliable [here](https://docs.rs/ncm_parser).
+
 一个单文件实现的 .ncm 解析器。
 
+# Minimum Required Rust Version
+
+**Nightly** now. 4 nightly-only features are enabled in this crate:
+
+- `#![feature(iter_next_chunk)]`
+- `#![feature(iter_advance_by)]`
+- `#![feature(iterator_try_collect)]`
+- `#![feature(doc_auto_cfg)]`
+
+Once these features get stable, this crate will bump to 1.0.0.
+
+
 # Examples
+
 ```rust
 use ncm_parser::NCMMetadata;
 use std::fs::File;
@@ -69,3 +84,11 @@ fn main() {
     File::create(meta_name).unwrap().write_all(metadata).unwrap();
 }
 ```
+
+# Contribute
+
+Feel free to contribute everything you like.
+
+# License
+
+Currently licensed under [MIT](https://choosealicense.com/licenses/mit/).
