@@ -1,0 +1,25 @@
+[package]
+name = "ncm_parser"
+version = "0.1.0"
+edition = "2021"
+authors = ["Junbo Huang <342526760@qq.com>"]
+description = "A single file ncm parser"
+license = "Unlicense"
+keywords = ["ncm", "dump", "parse", "parser", "reader"]
+categories = ["parser-implementations"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+thiserror = "1.0.43"
+aes = "0.8.3"
+cipher = {version = "0.4.4", features = ["block-padding"]}
+base64 = "0.21.2"
+serde_json = {version = "1.0.103", optional = true }
+
+[features]
+default = []
+serde_json = ["dep:serde_json"]
+
+[package.metadata.docs.rs]
+all-features = true

@@ -1,0 +1,8 @@
+[package]
+name = "ncm_dumper"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde_json = "1.0.103"
+ncm_parser = { path = "./ncm_parser", features = ["serde_json"]}
