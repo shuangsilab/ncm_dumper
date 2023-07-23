@@ -19,7 +19,7 @@ API Documentation is avaliable [here](https://docs.rs/ncm_parser).
 - `#![feature(iterator_try_collect)]`
 - `#![feature(doc_auto_cfg)]`
 
-Once these features get stable, this crate will bump to 1.0.0.
+Once these features get stable, the version number of this crate will bump up to 1.0.0.
 
 
 # Examples
