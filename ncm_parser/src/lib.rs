@@ -49,7 +49,7 @@
 //!     let music = ncm_file_from_iter.get_music_unchecked();
 //!
 //!     // Parse metadata
-//!     let ncm_meta = NCMMetadata::new(metadata).unwrap();
+//!     let ncm_meta = ncm_file_from_iter.get_parsed_matadata().unwrap();
 //!
 //!     // Save music
 //!     let music_name = ncm_file_name.with_extension(&ncm_meta.format);
@@ -89,29 +89,24 @@ use ParseError::*;
 /// An error type represents all the possible errors.
 #[derive(Error, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ParseError {
-    #[error("ParseError::EndOfFile. EOF while reading.")]
-    /// Unexpected end of file while inisializing [`NCMFile`]
+    #[error("The ncm file ends unexpectedly.")]
+    /// The *.ncm file ends unexpectedly while inisializing [`NCMFile`]
     /// with [`from_iter()`] or [`from_reader()`]
     EndOfFile,
-    #[error(
-        "ParseError::InvalidHeader. The .ncm file does not begin with \"CTENFDAM\"."
-    )]
-    /// The header of ncm file is not equal to `b"CTENFDAM\x01\x70"`,
+    #[error("The ncm file header does not match \"CTENFDAM\".")]
+    /// The ncm file header does not match \"CTENFDAM\\x01\\x70",
     /// which indicates the input file may not be ncm format.
     InvalidHeader,
-    #[error(
-        "ParseError::DecryptRC4KeyFailed. Failed when decrypting the AES-128 \
-         encrypted RC4 key."
-    )]
+    #[error("Decrypt ncm RC4 key failed.")]
     /// Failed when decrypting the AES-128 encrypted RC4 key.
     /// We can't get the music data without correctly decrypted RC4 key.
     DecryptRC4KeyFailed,
-    #[error(
-        "ParseError::BrokenMetadata. Failed when decrypting the AES-128 and BASE64 \
-         encrypted matadata."
-    )]
+    #[error("Decrypt ncm metadata failed.")]
     /// Failed when decrypting the AES-128 and BASE64 encrypted matadata.
     DecryptMetadataFailed,
+    #[error("Parse ncm metadata into struct failed.")]
+    /// Failed when parsing the JSON format metadata into struct.
+    ParseMetadataFailed,
 }
 
 /// A wrapped function for reading data
@@ -153,9 +148,9 @@ fn read_segment_reader<R: Read>(reader: &mut R, salt: u8) -> Option<Vec<u8>> {
 /// stored in [Vec] or [slice](std::slice), you should use this.
 /// # Example
 /// ```
-/// // Open file and store it into Vec.
+/// // Open file and store it in Vec.
 /// let mut ncm_file = Vec::New();
-/// std::fs::File::open("xxx.ncm")?.read_to_end(&mut ncm_file)?;
+/// std::fs::File::open("xxx.ncm").unwrap().read_to_end(&mut ncm_file).unwrap();
 ///
 /// // Parse it with `from_iter`
 /// let parsed_ncm_file = ncm_parser::from_iter(ncm_file.into_iter()).unwrap();
@@ -186,7 +181,7 @@ where
 /// # Example
 /// ```
 /// // Open file and parse it with `from_reader`
-/// let parsed_ncm_file = ncm_parser::from_reader(std::fs::File::open("xxx.ncm")?).unwrap();
+/// let parsed_ncm_file = ncm_parser::from_reader(std::fs::File::open("xxx.ncm").unwrap()).unwrap();
 /// ```
 pub fn from_reader<R: Read>(mut reader: R) -> Result<NCMFile, ParseError> {
     let mut ncm_header: [u8; 10] = Default::default();
@@ -261,7 +256,7 @@ impl NCMFile {
         .into_iter()
         .cycle();
 
-        // The compiler have done the SIMD optimization here.
+        // The compiler has done the SIMD optimization here.
         self.music
             .iter_mut()
             .zip(out_stream)
@@ -322,6 +317,14 @@ impl NCMFile {
     pub fn get_metadata_unchecked(&self) -> &Vec<u8> {
         &self.metadata
     }
+
+    #[cfg(feature = "serde_json")]
+    /// Parse the JSON format metadata into struct.
+    pub fn get_parsed_metadata(&mut self) -> Result<NCMMetadata, ParseError> {
+        let metadata = self.get_metadata()?;
+        #[allow(deprecated)]
+        return NCMMetadata::new(metadata).ok_or(ParseMetadataFailed);
+    }
 }
 
 #[cfg(feature = "serde_json")]
@@ -350,10 +353,10 @@ pub struct NCMMetadata {
 }
 
 #[cfg(feature = "serde_json")]
-
 impl NCMMetadata {
+    #[deprecated(since = "0.2.0", note = "Use `NCMFile::get_parsed_metadata()` instead.")]
     /// Parse the JSON format metadata into struct.
-    /// Returns [`None`] if parse failed.
+    /// Returns [`None`] if parsing failed.
     pub fn new(metadata: &[u8]) -> Option<Self> {
         let json: serde_json::Value = serde_json::from_slice(metadata).ok()?;
         let music_id = json["musicId"].as_u64()?;

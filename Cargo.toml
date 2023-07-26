@@ -2,10 +2,13 @@
 name = "ncm_dumper"
 version = "0.1.0"
 edition = "2021"
+authors = ["Junbo Huang <342526760@qq.com>"]
+description = "A multithread ncm dumper written in rust"
 
 [dependencies]
-serde_json = "1.0.103"
+clap = {version = "4.3.19", features = ["cargo", "derive", "unstable-v5", "color", "help", "wrap_help"]}
 ncm_parser = { path = "./ncm_parser", features = ["serde_json"]}
+thiserror = "1.0.44"
+yansi = "0.5.1"
 
-[profile.release]
-debug = true
+

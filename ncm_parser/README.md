@@ -66,7 +66,7 @@ fn main() {
     let music = ncm_file_from_iter.get_music_unchecked();
 
     // Parse metadata
-    let ncm_meta = NCMMetadata::new(metadata).unwrap();
+    let ncm_meta = ncm_file_from_iter.get_parsed_matadata().unwrap();
 
     // Save music
     let music_name = ncm_file_name.with_extension(&ncm_meta.format);
