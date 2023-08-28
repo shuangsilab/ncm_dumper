@@ -95,7 +95,7 @@ pub enum ParseError {
     /// with [`from_iter()`] or [`from_reader()`]
     EndOfFile,
     #[error("The ncm file header does not match \"CTENFDAM\".")]
-    /// The ncm file header does not match \"CTENFDAM\\x01\\x70",
+    /// The ncm file header does not match \"CTENFDAM\",
     /// which indicates the input file may not be ncm format.
     InvalidHeader,
     #[error("Failed to decrypt ncm RC4 key.")]
