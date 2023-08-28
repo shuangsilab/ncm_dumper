@@ -49,8 +49,8 @@ fn main() {
 
     // Two methods are identital.
     assert_eq!(
-        ncm_file_from_iter.get_image(),
-        ncm_file_from_reader.get_image()
+        ncm_file_from_iter.get_image().unwrap(),
+        ncm_file_from_reader.get_image().unwrap()
     );
     assert_eq!(
         ncm_file_from_iter.get_metadata().unwrap(),
