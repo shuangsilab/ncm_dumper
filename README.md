@@ -1,1 +1,1 @@
-A multithreading ncm file dumper with SIMD optimized. Under developing now.
+A multithreading ncm file dumper. Under developing now.

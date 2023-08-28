@@ -79,7 +79,7 @@
 use std::io::Read;
 
 use aes::Aes128Dec;
-use base64::engine::general_purpose::STANDARD_NO_PAD as base64dec;
+use base64::engine::general_purpose::STANDARD as base64dec;
 use base64::Engine;
 use cipher::block_padding::Pkcs7;
 use cipher::{BlockDecrypt, KeyInit};
@@ -342,15 +342,16 @@ pub struct NCMMetadata {
     pub music: (Name, Id),
     pub artist: Vec<(Name, Id)>,
     pub album: (Name, Id),
-    pub album_pic_doc_id: String,
+    pub album_pic_doc_id: u64,
     pub album_pic_url: String,
     pub bitrate: u32,
-    pub mp3_doc_id: String,
+    pub mp3_doc_id: Option<String>,
     pub duration: u32,
     pub mv_id: u32,
     pub alias: Vec<String>,
     pub trans_names: Vec<String>,
     pub format: String,
+    pub flag: Option<u32>,
 }
 
 #[cfg(feature = "serde_json")]
@@ -379,10 +380,17 @@ impl NCMMetadata {
 
         let album_id = json["albumId"].as_u64()?;
         let album = json["album"].as_str()?.to_string();
-        let album_pic_doc_id = json["albumPicDocId"].as_str()?.to_string();
+        let album_pic_doc_id = if let Some(id) = json["albumPicDocId"].as_str() {
+            id.parse().ok()?
+        } else if let Some(id) = json["albumPicDocId"].as_u64() {
+            id
+        } else {
+            return None
+        };
+
         let album_pic_url = json["albumPic"].as_str()?.to_string();
         let bitrate = json["bitrate"].as_u64()? as u32;
-        let mp3_doc_id = json["mp3DocId"].as_str()?.to_string();
+        let mp3_doc_id = json["mp3DocId"].as_str().map(|x| x.to_string());
         let duration = json["duration"].as_u64()? as u32;
         let mv_id = json["mvId"].as_u64()? as u32;
 
@@ -400,6 +408,8 @@ impl NCMMetadata {
 
         let format = json["format"].as_str()?.to_string();
 
+        let flag = json["flag"].as_u64().map(|x| x as u32);
+
         Some(Self {
             music: (music_name, music_id),
             artist,
@@ -413,6 +423,7 @@ impl NCMMetadata {
             alias,
             trans_names,
             format,
+            flag,
         })
     }
 }
