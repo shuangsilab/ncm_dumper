@@ -1,9 +1,10 @@
-use std::path::PathBuf;
 use std::num::NonZeroU32;
+use std::path::PathBuf;
 
-use anyhow::Context;
-use walkdir::WalkDir;
 use super::Config;
+use anyhow::Context;
+use encoding_rs::{GBK, UTF_8};
+use walkdir::WalkDir;
 
 pub mod en_us;
 pub mod zh_cn;
@@ -32,7 +33,7 @@ pub fn run() -> Config {
 #[derive(Debug)]
 pub struct ErrMsg {
     pub header: &'static str,
-    pub filelist_read: &'static str,
+    pub invalid_utf8: &'static str,
     pub get_path_meta: &'static str,
     pub walkdir: &'static str,
     pub no_output: &'static str,
@@ -43,10 +44,24 @@ pub struct ErrMsg {
     pub saving_meta: &'static str,
     pub not_ncm: &'static str,
     pub parsing_ncm: &'static str,
+
+    pub ok_msg: &'static str,
+}
+
+macro_rules! UTF_8DEC {
+    ($x: expr) => {
+        UTF_8.decode_without_bom_handling_and_without_replacement($x)
+    };
+}
+
+macro_rules! GBKDEC {
+    ($x: expr) => {
+        GBK.decode_without_bom_handling_and_without_replacement($x)
+    };
 }
 
 trait CLIConfig {
-    const ERR_MSG: ErrMsg;
+    const ERR_MSG: &'static ErrMsg;
 
     fn inputs(&self) -> Option<&Vec<String>>;
     fn filelists(&self) -> Option<&Vec<String>>;
@@ -81,17 +96,26 @@ trait CLIConfig {
         let empty_vec = Vec::new();
         let filelists = self.filelists().unwrap_or(&empty_vec);
         for file in filelists {
-            let pathlist: Vec<_> = match std::fs::read_to_string(file)
-                .context(format!("{} [{}]", err_msg.filelist_read, file))
+            let file_txt = match std::fs::read(file)
+                .context(format!("{} [{}]", err_msg.reading_file, file))
             {
-                Ok(pathlist) => pathlist.lines().map(|x| PathBuf::from(x)).collect(),
+                Ok(file_txt) => file_txt,
                 Err(err) => {
                     self.error(format!("{err:?}"));
                     continue;
                 }
             };
 
-            for path in pathlist {
+            let pathlist = if let Some(pathlist) = UTF_8DEC!(&file_txt) {
+                pathlist
+            } else if let Some(pathlist) = GBKDEC!(&file_txt) {
+                pathlist
+            } else {
+                self.error(format!("{} [{}]", err_msg.invalid_utf8, file));
+                continue;
+            };
+
+            for path in pathlist.lines().map(|x| PathBuf::from(x)) {
                 match path.metadata().context(format!(
                     "{} [{}] [{}]",
                     err_msg.get_path_meta,

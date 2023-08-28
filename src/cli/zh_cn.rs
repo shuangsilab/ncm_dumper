@@ -111,19 +111,21 @@ pub struct CLI {
 }
 
 impl CLIConfig for CLI {
-    const ERR_MSG: ErrMsg = ErrMsg {
+    const ERR_MSG: &'static ErrMsg = &ErrMsg {
         header: "\x1b[1;91m错误:\x1b[0m",
-        filelist_read: "解析文件中的路径时发生错误：",
+        invalid_utf8: "文件中包含非 UTF-8/GBK 字符",
         get_path_meta: "读取路径信息时发生错误：",
         walkdir: "无法读取路径下的文件：",
         no_output: "仅启用 --no-music 选项的情况下程序将不会输出任何文件。",
 
-        reading_file: "读取文件失败：",
+        reading_file: "读取文件时发生错误：",
         saving_ncm: "保存 ncm 文件时出错：",
         saving_img: "保存图片时出错：",
         saving_meta: "保存文件元信息时出错：",
         not_ncm: "不是 ncm 文件。",
         parsing_ncm: "解析 ncm 文件时出现错误：",
+
+        ok_msg: "导出成功。",
     };
 
     fn inputs(&self) -> Option<&Vec<String>> {

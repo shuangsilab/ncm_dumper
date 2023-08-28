@@ -1,1 +1,1 @@
-A multithreading ncm file dumper. Under developing now.
+A multithreading ncm file dumper. Develop done. Writing README.md now.

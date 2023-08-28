@@ -117,20 +117,23 @@ pub struct CLI {
 }
 
 impl CLIConfig for CLI {
-    const ERR_MSG: ErrMsg = ErrMsg {
+    const ERR_MSG: &'static ErrMsg = &ErrMsg {
         header: "\x1b[1;91mError:\x1b[0m",
-        filelist_read: "Failed in reading paths in filelist.",
+        invalid_utf8: "Found invalid UTF-8/GBK characters",
         get_path_meta: "Failed in reading metadata of path.",
         walkdir: "Failed to read files in directory.",
         no_output: "No output when enabling '--no-music' only.",
 
-        reading_file: "Failed in reading files.",
+        reading_file: "Failed when reading file.",
         saving_ncm: "Failed in saving ncm files.",
         saving_img: "Failed in saving cover image.",
         saving_meta: "Failed in saving metadata.",
         not_ncm: "This file is not a valid ncm file.",
         parsing_ncm: "Failed in parsing ncm files.",
+
+        ok_msg: "Export Success.",
     };
+
 
     fn inputs(&self) -> Option<&Vec<String>> {
         self.inputs.as_ref()

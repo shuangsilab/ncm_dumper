@@ -44,13 +44,18 @@ fn main() {
         tasks.push(thread_pool.evaluate(task));
     }
 
-    for task in tasks {
-        let result = task.await_complete();
-        if let Err(err) = result {
-            eprintln!("{} {:?}", cfg.err_msg.header, err);
-            if cfg.skip_error == false {
-                thread_pool.shutdown();
-                break;
+    let len = tasks.len();
+    for (i, task) in tasks.into_iter().enumerate() {
+        match task.await_complete(){
+            Ok((ok_msg, file_name)) => {
+                println!("[{}/{}] {} [{}]", i + 1, len, ok_msg, file_name.display());
+            }
+            Err(err) => {
+                eprintln!("{} {:?}", cfg.err_msg.header, err);
+                if cfg.skip_error == false {
+                    thread_pool.shutdown();
+                    break;
+                }
             }
         }
     }

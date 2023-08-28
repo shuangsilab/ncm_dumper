@@ -8,12 +8,12 @@ use crate::cli::ErrMsg;
 
 pub fn dump(
     err_msg: &ErrMsg,
-    file: &PathBuf,
+    file: &'static PathBuf,
     out_dir: Option<&PathBuf>,
     with_music: bool,
     with_image: bool,
     with_metadata: bool,
-) -> Result<()> {
+) -> Result<(&'static str, &'static PathBuf)> {
     let in_file = File::open(&file).context(format!(
         "{} [{}]",
         err_msg.reading_file,
@@ -82,5 +82,5 @@ pub fn dump(
         ))?;
     }
 
-    Ok(())
+    Ok((err_msg.ok_msg, file))
 }
