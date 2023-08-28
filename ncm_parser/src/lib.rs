@@ -145,8 +145,8 @@ fn read_segment_reader<R: Read>(reader: &mut R, salt: u8) -> Option<Vec<u8>> {
     Some(seg_data)
 }
 
-/// Parse the ncm file with iterator. If you have an ncm file
-/// stored in [Vec] or [slice](std::slice), you should use this.
+/// Parse the ncm file with iterator. Recommended if you have an ncm file
+/// stored in [Vec] or [slice](std::slice).
 /// # Example
 /// ```
 /// // Open file and store it in Vec.
@@ -177,8 +177,8 @@ where
     })
 }
 
-/// Parse the ncm file with reader. If you have an ncm file
-/// opened from [File](std::fs::File), you should use this.
+/// Parse the ncm file with reader. Recommended if you have an ncm file
+/// opened from [File](std::fs::File).
 /// # Example
 /// ```
 /// // Open file and parse it with `from_reader`
