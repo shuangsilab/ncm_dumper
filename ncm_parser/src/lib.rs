@@ -32,8 +32,8 @@
 //!
 //!     // Two methods are identital.
 //!     assert_eq!(
-//!         ncm_file_from_iter.get_image(),
-//!         ncm_file_from_reader.get_image()
+//!         ncm_file_from_iter.get_image().unwrap(),
+//!         ncm_file_from_reader.get_image().unwrap()
 //!     );
 //!     assert_eq!(
 //!         ncm_file_from_iter.get_metadata().unwrap(),
@@ -70,6 +70,7 @@
 //! }
 //! ```
 
+#![feature(never_type)]
 #![feature(iter_next_chunk)]
 #![feature(iter_advance_by)]
 #![feature(iterator_try_collect)]
@@ -97,15 +98,15 @@ pub enum ParseError {
     /// The ncm file header does not match \"CTENFDAM\\x01\\x70",
     /// which indicates the input file may not be ncm format.
     InvalidHeader,
-    #[error("Decrypt ncm RC4 key failed.")]
-    /// Failed when decrypting the AES-128 encrypted RC4 key.
+    #[error("Failed to decrypt ncm RC4 key.")]
+    /// Failed to decrypt the AES-128 encrypted RC4 key.
     /// We can't get the music data without correctly decrypted RC4 key.
     DecryptRC4KeyFailed,
-    #[error("Decrypt ncm metadata failed.")]
-    /// Failed when decrypting the AES-128 and BASE64 encrypted matadata.
+    #[error("Failed to decrypt ncm metadata.")]
+    /// Failed to decrypt the AES-128 and BASE64 encrypted matadata.
     DecryptMetadataFailed,
-    #[error("Parse ncm metadata into struct failed.")]
-    /// Failed when parsing the JSON format metadata into struct.
+    #[error("Failed to parse ncm metadata into struct.")]
+    /// Failed to parse the JSON format metadata into struct.
     ParseMetadataFailed,
 }
 
@@ -159,7 +160,7 @@ pub fn from_iter<T>(mut iter: T) -> Result<NCMFile, ParseError>
 where
     T: Iterator<Item = u8> + Clone,
 {
-    if iter.next_chunk::<10>().map_err(|_| EndOfFile)? != *b"CTENFDAM\x01\x70" {
+    if iter.next_chunk::<10>().map_err(|_| EndOfFile)?[0..8] != *b"CTENFDAM" {
         return Err(InvalidHeader);
     }
     let rc4_key = read_segment_iter(&mut iter, 0x64).ok_or(EndOfFile)?;
@@ -186,7 +187,7 @@ where
 pub fn from_reader<R: Read>(mut reader: R) -> Result<NCMFile, ParseError> {
     let mut ncm_header: [u8; 10] = Default::default();
     reader.read_exact(&mut ncm_header).map_err(|_| EndOfFile)?;
-    if ncm_header != *b"CTENFDAM\x01\x70" {
+    if ncm_header[0..8] != *b"CTENFDAM" {
         return Err(InvalidHeader);
     }
     let rc4_key = read_segment_reader(&mut reader, 0x64).ok_or(EndOfFile)?;
@@ -267,8 +268,8 @@ impl NCMFile {
 
     /// Get cover image. Usually in PNG or JPEG format.
     /// Same as [`get_image_unchecked()`](NCMFile::get_image_unchecked()).
-    pub fn get_image(&self) -> &Vec<u8> {
-        &self.image
+    pub fn get_image(&self) -> Result<&Vec<u8>, !> {
+        Ok(&self.image)
     }
 
     /// Get metadata.
@@ -354,7 +355,10 @@ pub struct NCMMetadata {
 
 #[cfg(feature = "serde_json")]
 impl NCMMetadata {
-    #[deprecated(since = "0.2.0", note = "Use `NCMFile::get_parsed_metadata()` instead.")]
+    #[deprecated(
+        since = "0.2.0",
+        note = "Use `NCMFile::get_parsed_metadata()` instead."
+    )]
     /// Parse the JSON format metadata into struct.
     /// Returns [`None`] if parsing failed.
     pub fn new(metadata: &[u8]) -> Option<Self> {

@@ -1,2 +1,3 @@
-max_width = 80
-format_strings = false
+max_width = 85
+format_strings = true
+imports_granularity = "Module"
