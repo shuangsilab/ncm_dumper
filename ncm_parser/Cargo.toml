@@ -1,6 +1,6 @@
 [package]
 name = "ncm_parser"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 authors = ["Junbo Huang <342526760@qq.com>"]
 license = "MIT"
@@ -20,7 +20,7 @@ base64 = "0.21.4"
 serde_json = {version = "1.0.107", optional = true }
 
 [features]
-default = ["serde_json"]
+default = []
 serde_json = ["dep:serde_json"]
 
 [package.metadata.docs.rs]
