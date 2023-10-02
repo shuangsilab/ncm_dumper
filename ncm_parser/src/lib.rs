@@ -15,12 +15,8 @@
 //!
 //! fn main() {
 //!     // Open .ncm file
-//!     let mut ncm_file = Vec::new();
 //!     let ncm_file_name = Path::new("xxx.ncm");
-//!     File::open(ncm_file_name)
-//!         .unwrap()
-//!         .read_to_end(&mut ncm_file)
-//!         .unwrap();
+//!     let mut ncm_file = std::fs::read(ncm_file_name).unwrap();
 //!
 //!     // Parse ncm file with `from_iter`
 //!     let mut ncm_file_from_iter =
@@ -30,7 +26,7 @@
 //!     let mut ncm_file_from_reader =
 //!         ncm_parser::from_reader(File::open(ncm_file_name).unwrap()).unwrap();
 //!
-//!     // Two methods are identital.
+//!     // Both functions get same result.
 //!     assert_eq!(
 //!         ncm_file_from_iter.get_image().unwrap(),
 //!         ncm_file_from_reader.get_image().unwrap()
@@ -44,29 +40,27 @@
 //!         ncm_file_from_reader.get_music().unwrap()
 //!     );
 //!
+//!     // Parse metadata
+//!     let ncm_meta = ncm_file_from_iter.get_parsed_metadata().unwrap();
+//!
 //!     let image = ncm_file_from_iter.get_image_unchecked();
 //!     let metadata = ncm_file_from_iter.get_metadata_unchecked();
 //!     let music = ncm_file_from_iter.get_music_unchecked();
 //!
-//!     // Parse metadata
-//!     let ncm_meta = ncm_file_from_iter.get_parsed_matadata().unwrap();
-//!
 //!     // Save music
 //!     let music_name = ncm_file_name.with_extension(&ncm_meta.format);
-//!     File::create(music_name).unwrap().write_all(&music).unwrap();
+//!     std::fs::write(music_name, &music).unwrap();
 //!
-//!     // Read the cover image format
+//!     // Get image format
 //!     let image_ext = ncm_meta.album_pic_url.rsplit_once('.').unwrap().1;
 //!
 //!     // Save cover image
 //!     let image_name = ncm_file_name.with_extension(image_ext);
-//!     File::create(image_name).unwrap().write_all(image).unwrap();
+//!     std::fs::write(image_name, &image).unwrap();
 //!
 //!     // Save metadata
 //!     let meta_name = ncm_file_name.with_extension("json");
-//!     File::create(meta_name).unwrap().write_all(metadata).unwrap();
-//!
-//!     println!("{:#?}", ncm_meta);
+//!     std::fs::write(meta_name, &metadata).unwrap();
 //! }
 //! ```
 
@@ -105,9 +99,9 @@ pub enum ParseError {
     #[error("Failed to decrypt ncm metadata.")]
     /// Failed to decrypt the AES-128 and BASE64 encrypted matadata.
     DecryptMetadataFailed,
-    #[error("Failed to parse ncm metadata into struct.")]
+    #[error("Failed parsing ncm metadata. [{0}]")]
     /// Failed to parse the JSON format metadata into struct.
-    ParseMetadataFailed,
+    ParseMetadataFailed(&'static str),
 }
 
 /// A wrapped function for reading data
@@ -150,8 +144,7 @@ fn read_segment_reader<R: Read>(reader: &mut R, salt: u8) -> Option<Vec<u8>> {
 /// # Example
 /// ```
 /// // Open file and store it in Vec.
-/// let mut ncm_file = Vec::New();
-/// std::fs::File::open("xxx.ncm").unwrap().read_to_end(&mut ncm_file).unwrap();
+/// let mut ncm_file = std::fs::read("xxx.ncm").unwrap();
 ///
 /// // Parse it with `from_iter`
 /// let parsed_ncm_file = ncm_parser::from_iter(ncm_file.into_iter()).unwrap();
@@ -324,34 +317,32 @@ impl NCMFile {
     pub fn get_parsed_metadata(&mut self) -> Result<NCMMetadata, ParseError> {
         let metadata = self.get_metadata()?;
         #[allow(deprecated)]
-        return NCMMetadata::new(metadata).ok_or(ParseMetadataFailed);
+        return NCMMetadata::new(metadata);
     }
 }
-
-#[cfg(feature = "serde_json")]
-type Id = u64;
-
-#[cfg(feature = "serde_json")]
-type Name = String;
 
 #[cfg(feature = "serde_json")]
 #[derive(Debug, Clone)]
 #[allow(missing_docs)]
 /// A struct contains all the JSON values in metadata.
 pub struct NCMMetadata {
-    pub music: (Name, Id),
-    pub artist: Vec<(Name, Id)>,
-    pub album: (Name, Id),
+    /// music_id might not be a number.
+    pub music_id: String,
+    pub music_name: String,
+    pub artists: Vec<(String, u64)>,
+    pub album_id: u64,
+    pub album_name: String,
     pub album_pic_doc_id: u64,
     pub album_pic_url: String,
-    pub bitrate: u32,
+    pub bitrate: u64,
     pub mp3_doc_id: Option<String>,
-    pub duration: u32,
-    pub mv_id: u32,
+    pub duration: u64,
+    pub mv_id: u64,
     pub alias: Vec<String>,
     pub trans_names: Vec<String>,
     pub format: String,
-    pub flag: Option<u32>,
+    pub fee: Option<u64>,
+    pub flag: Option<u64>,
 }
 
 #[cfg(feature = "serde_json")]
@@ -362,58 +353,109 @@ impl NCMMetadata {
     )]
     /// Parse the JSON format metadata into struct.
     /// Returns [`None`] if parsing failed.
-    pub fn new(metadata: &[u8]) -> Option<Self> {
-        let json: serde_json::Value = serde_json::from_slice(metadata).ok()?;
-        let music_id = json["musicId"].as_u64()?;
-        let music_name = json["musicName"].as_str()?.to_string();
+    pub fn new(metadata: &[u8]) -> Result<Self, ParseError> {
+        use std::str::FromStr;
 
-        let artist = json["artist"]
-            .as_array()?
+        let json: serde_json::Value = serde_json::from_slice(metadata)
+            .map_err(|_| ParseMetadataFailed("Cannot read the ncm metadata."))?;
+
+        let music_id = json["musicId"]
+            .as_str()
+            .map(|x| x.to_string())
+            .unwrap_or_else(|| json["musicId"].to_string());
+
+        let music_name = json["musicName"]
+            .as_str()
+            .ok_or(ParseMetadataFailed("Failed parsing [musicName]."))?
+            .to_string();
+
+        let artists: Vec<_> = json["artist"]
+            .as_array()
+            .ok_or(ParseMetadataFailed("Failed parsing [artist]."))?
             .into_iter()
-            .map(|x| {
-                let [ref name, ref id] = x.as_array()?[0..2] else {
+            .map(|artist| {
+                let [name, id] = &artist.as_array()?[0..2] else {
                     return None;
                 };
-                Some((name.as_str()?.to_string(), id.as_u64()?))
+                let name = name.as_str()?.to_string();
+                let id = id.as_u64().or_else(|| u64::from_str(id.as_str()?).ok())?;
+                return Some((name, id));
             })
-            .try_collect::<Vec<_>>()?;
+            .try_collect()
+            .ok_or(ParseMetadataFailed("Failed parsing [artist]."))?;
 
-        let album_id = json["albumId"].as_u64()?;
-        let album = json["album"].as_str()?.to_string();
-        let album_pic_doc_id = if let Some(id) = json["albumPicDocId"].as_str() {
-            id.parse().ok()?
-        } else if let Some(id) = json["albumPicDocId"].as_u64() {
-            id
-        } else {
-            return None
-        };
+        let album_id = json["albumId"]
+            .as_u64()
+            .or_else(|| u64::from_str(json["albumId"].as_str()?).ok())
+            .ok_or(ParseMetadataFailed("Failed parsing [albumId]."))?;
 
-        let album_pic_url = json["albumPic"].as_str()?.to_string();
-        let bitrate = json["bitrate"].as_u64()? as u32;
+        let album_name = json["album"]
+            .as_str()
+            .ok_or(ParseMetadataFailed("Failed parsing [album]."))?
+            .to_string();
+
+        let album_pic_doc_id = json["albumPicDocId"]
+            .as_u64()
+            .or_else(|| u64::from_str(json["albumPicDocId"].as_str()?).ok())
+            .ok_or(ParseMetadataFailed("Failed parsing [albumPicDocId]."))?;
+
+        let album_pic_url = json["albumPic"]
+            .as_str()
+            .ok_or(ParseMetadataFailed("Failed parsing [albumPic]."))?
+            .to_string();
+
+        let bitrate = json["bitrate"]
+            .as_u64()
+            .ok_or(ParseMetadataFailed("Failed parsing [bitrate]."))?;
+
         let mp3_doc_id = json["mp3DocId"].as_str().map(|x| x.to_string());
-        let duration = json["duration"].as_u64()? as u32;
-        let mv_id = json["mvId"].as_u64()? as u32;
 
-        let alias = json["alias"]
-            .as_array()?
+        let duration = json["duration"]
+            .as_u64()
+            .ok_or(ParseMetadataFailed("Failed parsing [duration]."))?;
+
+        let mv_id = json["mvId"]
+            .as_u64()
+            .or_else(|| u64::from_str(json["mvId"].as_str()?).ok())
+            .unwrap_or_default();
+
+        let alias: Vec<_> = json["alias"]
+            .as_array()
+            .ok_or(ParseMetadataFailed("Failed parsing [alias]."))?
             .into_iter()
             .map(|x| x.as_str().map(|x| x.to_string()))
-            .try_collect::<Vec<_>>()?;
+            .try_collect()
+            .ok_or(ParseMetadataFailed("Failed parsing [alias]."))?;
 
-        let trans_names = json["transNames"]
-            .as_array()?
+        let trans_names: Vec<_> = json["transNames"]
+            .as_array()
+            .ok_or(ParseMetadataFailed("Failed parsing [transNames]."))?
             .into_iter()
             .map(|x| x.as_str().map(|x| x.to_string()))
-            .try_collect::<Vec<_>>()?;
+            .try_collect()
+            .ok_or(ParseMetadataFailed("Failed parsing [transNames]."))?;
 
-        let format = json["format"].as_str()?.to_string();
+        let format = json["format"]
+            .as_str()
+            .ok_or(ParseMetadataFailed("Failed parsing [format]."))?
+            .to_string();
 
-        let flag = json["flag"].as_u64().map(|x| x as u32);
+        let fee = json["fee"].as_u64();
 
-        Some(Self {
-            music: (music_name, music_id),
-            artist,
-            album: (album, album_id),
+        let mut flag = json["flag"].as_u64();
+        if flag == None {
+            let privilege = json["privilege"].as_object();
+            if let Some(inner_flag) = privilege {
+                flag = inner_flag["flag"].as_u64();
+            }
+        }
+
+        return Ok(Self {
+            music_name,
+            music_id,
+            artists,
+            album_name,
+            album_id,
             album_pic_doc_id,
             album_pic_url,
             bitrate,
@@ -423,7 +465,8 @@ impl NCMMetadata {
             alias,
             trans_names,
             format,
+            fee,
             flag,
-        })
+        });
     }
 }

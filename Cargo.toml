@@ -7,11 +7,11 @@ description = "A multithread ncm dumper written in rust"
 
 [dependencies]
 anyhow = "1.0.75"
-clap = {version = "4.4.0", features = ["derive", "unstable-v5", "wrap_help"]}
+clap = {version = "4.4.6", features = ["derive", "unstable-v5", "wrap_help"]}
 encoding_rs = {version = "0.8.33", features = ["simd-accel"]}
 ncm_parser = { path = "./ncm_parser", features = ["serde_json"]}
 rusty_pool = { version = "0.7.0", default-features = false }
-walkdir = "2.3.3"
+walkdir = "2.4.0"
 
 [profile.release]
 opt-level = 3

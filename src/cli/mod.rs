@@ -73,7 +73,7 @@ trait CLIConfig {
     fn threads(&self) -> u32;
     fn skip_error(&self) -> bool;
 
-    fn error(&self, err_msg: impl std::fmt::Display) {
+    fn error(&self, err_msg: std::fmt::Arguments) {
         eprintln!("{} {}", Self::ERR_MSG.header, err_msg);
         if self.skip_error() == false {
             std::process::exit(1);
@@ -87,7 +87,7 @@ trait CLIConfig {
             && self.metadata() == false
             && self.cover_img() == false
         {
-            self.error(err_msg.no_output);
+            self.error(format_args!("{}", err_msg.no_output));
         }
 
         let mut ncm_dirs = Vec::new();
@@ -101,7 +101,7 @@ trait CLIConfig {
             {
                 Ok(file_txt) => file_txt,
                 Err(err) => {
-                    self.error(format!("{err:?}"));
+                    self.error(format_args!("{err:?}"));
                     continue;
                 }
             };
@@ -111,7 +111,7 @@ trait CLIConfig {
             } else if let Some(pathlist) = GBKDEC!(&file_txt) {
                 pathlist
             } else {
-                self.error(format!("{} [{}]", err_msg.invalid_utf8, file));
+                self.error(format_args!("{} [{}]", err_msg.invalid_utf8, file));
                 continue;
             };
 
@@ -134,7 +134,7 @@ trait CLIConfig {
                         }
                     }
                     Err(err) => {
-                        self.error(format!("{err:?}"));
+                        self.error(format_args!("{err:?}"));
                         continue;
                     }
                 }
@@ -161,7 +161,7 @@ trait CLIConfig {
                     }
                 }
                 Err(err) => {
-                    self.error(format!("{err:?}"));
+                    self.error(format_args!("{err:?}"));
                     continue;
                 }
             }
@@ -180,7 +180,7 @@ trait CLIConfig {
             {
                 Ok(files) => files,
                 Err(err) => {
-                    self.error(format!("{err:?}"));
+                    self.error(format_args!("{err:?}"));
                     continue;
                 }
             };

@@ -29,18 +29,18 @@ pub fn dump(
             err.context(format!("{} [{}]", err_msg.parsing_ncm, file.display()))?
         }
     };
-
+    
     let out_file_exts_with_ncm = match out_dir {
         Some(out_dir) => out_dir.join(file.file_name().unwrap()),
         None => file.clone(),
     };
-
+    
     let metadata = ncm.get_parsed_metadata().context(format!(
         "{} [{}]",
         err_msg.parsing_ncm,
         file.display()
     ))?;
-
+    
     if with_music {
         let music = ncm.get_music().context(format!(
             "{} [{}]",

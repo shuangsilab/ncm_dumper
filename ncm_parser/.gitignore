@@ -1,1 +1,6 @@
 /target
+/tests/img
+/tests/json
+/tests/music
+/tests/ncm
+/tests/txt
